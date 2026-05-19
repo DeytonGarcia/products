@@ -1039,7 +1039,7 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function()
     _pendingReetDelete = null;
     closeDeleteModal();
     showToast('Registro eliminado', 'error');
-    navigateTo('reetiquetados');
+    renderAll();
     return;
   }
   if (!pendingDelete) return;
@@ -1732,7 +1732,7 @@ document.getElementById('reetiquetadoForm').addEventListener('submit', function(
   else            { sec.products[Number(idx)] = prod; showToast('Reetiquetado actualizado', 'info'); }
   saveDB(db);
   closeReetiquetadoModal();
-  navigateTo('reetiquetados');
+  renderAll();
 });
 
 // ---- Modal Detalle Reetiquetado ----
@@ -1815,7 +1815,7 @@ function restoreReet(idx) {
   sec.products[idx].activo = true;
   saveDB(db);
   showToast('Registro restaurado', 'success');
-  navigateTo('reetiquetados');
+  renderAll();
 }
 
 // ---- Eliminar permanentemente Reetiquetado ----
@@ -1835,7 +1835,7 @@ document.getElementById('confirmPermDeleteReetBtn').addEventListener('click', fu
   saveDB(db);
   closePermDeleteReetModal();
   showToast('Registro eliminado permanentemente', 'error');
-  navigateTo('reetiquetados');
+  renderAll();
 });
 
 // ============================================================
