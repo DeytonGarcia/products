@@ -18,6 +18,98 @@ const EXCLUDED_FROM_GENERAL = new Set(['desechos', 'salidas', 'reetiquetados']);
 
 const ROWS_PER_PAGE = 30;
 
+const AUTH_KEY = 'agroInventarioAuth_v1';
+const AUTH_USER = '75165226';
+const AUTH_PASS = '123';
+const SESSION_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutos
+
+function getAuthInfo() {
+  const raw = localStorage.getItem(AUTH_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { localStorage.removeItem(AUTH_KEY); return null; }
+}
+
+function saveAuthInfo(auth) {
+  localStorage.setItem(AUTH_KEY, JSON.stringify(auth));
+}
+
+function clearAuthInfo() {
+  localStorage.removeItem(AUTH_KEY);
+}
+
+function isAuthenticated() {
+  const auth = getAuthInfo();
+  return !!(auth && auth.user === AUTH_USER && auth.loggedIn && typeof auth.lastActivity === 'number' && (Date.now() - auth.lastActivity) < SESSION_TIMEOUT_MS);
+}
+
+function updateAuthUi() {
+  const btn = document.getElementById('logoutBtn');
+  if (btn) btn.style.display = isAuthenticated() ? 'inline-flex' : 'none';
+}
+
+function updateActivity() {
+  const auth = getAuthInfo();
+  if (!auth || !auth.loggedIn) return;
+  auth.lastActivity = Date.now();
+  saveAuthInfo(auth);
+}
+
+function checkInactivity() {
+  const auth = getAuthInfo();
+  if (!auth || !auth.loggedIn) return;
+  if (Date.now() - auth.lastActivity >= SESSION_TIMEOUT_MS) {
+    logout(true);
+  }
+}
+
+function showLogin(message = 'Ingresa tus credenciales para continuar.') {
+  const overlay = document.getElementById('loginOverlay');
+  const errorEl = document.getElementById('loginError');
+  const form = document.getElementById('loginForm');
+  if (overlay) overlay.classList.add('open');
+  if (errorEl) { errorEl.textContent = ''; }
+  if (form) form.reset();
+  document.getElementById('loginMessage').textContent = message;
+  hidePageLoader(0);
+  document.body.classList.add('app-locked');
+  updateAuthUi();
+  const userInput = document.getElementById('loginUser');
+  if (userInput) userInput.focus();
+}
+
+function hideLogin() {
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.classList.remove('app-locked');
+  hidePageLoader(0);
+  updateAuthUi();
+}
+
+function loginUser(username, password) {
+  if (username === AUTH_USER && password === AUTH_PASS) {
+    saveAuthInfo({ user: AUTH_USER, loggedIn: true, lastActivity: Date.now() });
+    hideLogin();
+    renderAll();
+    return true;
+  }
+  const errorEl = document.getElementById('loginError');
+  if (errorEl) errorEl.textContent = 'Usuario o contraseña incorrectos.';
+  return false;
+}
+
+function logout(expired = false) {
+  clearAuthInfo();
+  updateAuthUi();
+  showLogin(expired ? 'Tu sesión expiró por inactividad. Vuelve a ingresar.' : 'Sesión cerrada. Ingresa de nuevo.');
+  if (!expired) showToast('Sesión cerrada', 'error');
+}
+
+function setupSessionWatchers() {
+  const events = ['click', 'keydown', 'mousemove', 'touchstart', 'scroll'];
+  events.forEach(evt => document.addEventListener(evt, updateActivity, { passive: true }));
+  setInterval(checkInactivity, 30 * 1000);
+}
+
 // ============================================================
 // BADGES
 // ============================================================
@@ -2106,10 +2198,21 @@ function ejecutarReinicio() {
 // ============================================================
 function initApp() {
   window.db = db;
-  showPageLoader('Cargando inventario...');
-  renderAll();
-  hidePageLoader(1000);
+  setupSessionWatchers();
+  if (!isAuthenticated()) {
+    showLogin('Bienvenido. Ingresa tu usuario y contraseña.');
+  } else {
+    hideLogin();
+    renderAll();
+  }
 }
+
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const usuario = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value.trim();
+  loginUser(usuario, password);
+});
 
 // Esperar a Firebase (máx 4 segundos de fallback)
 let _initDone = false;
