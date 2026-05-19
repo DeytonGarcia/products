@@ -10,10 +10,11 @@ const SECTION_CONFIG = {
   fertilizantes: { icon:'fa-solid fa-flask',             color:'bg-yellow-500/30', text:'text-yellow-200', hdr:'from-yellow-700 to-yellow-600' },
   desechos:      { icon:'fa-solid fa-trash-can',         color:'bg-rose-500/30',   text:'text-rose-200',   hdr:'from-rose-800 to-rose-700'     },
   salidas:       { icon:'fa-solid fa-arrow-right-from-bracket', color:'bg-indigo-500/30', text:'text-indigo-200', hdr:'from-indigo-700 to-indigo-600' },
+  reetiquetados: { icon:'fa-solid fa-tag', color:'bg-teal-500/30', text:'text-teal-200', hdr:'from-teal-700 to-teal-600' },
 };
 
 // Secciones excluidas de la Tabla General
-const EXCLUDED_FROM_GENERAL = new Set(['desechos', 'salidas']);
+const EXCLUDED_FROM_GENERAL = new Set(['desechos', 'salidas', 'reetiquetados']);
 
 const ROWS_PER_PAGE = 30;
 
@@ -89,9 +90,37 @@ function getVS(key) {
 // ============================================================
 const DB_KEY = 'agroInventarioDB_v5';
 
+function getProductTotal(p) {
+  return Number(p.cantidad || 0) * Number(p.precio || 0);
+}
+
+function normalizeInventoryData(data) {
+  if (!data || !Array.isArray(data.sections)) return data;
+  let changed = false;
+  data.sections.forEach(sec => {
+    if (sec.id === 'salidas' || !Array.isArray(sec.products)) return;
+    sec.products.forEach(p => {
+      const esperado = getProductTotal(p);
+      if (Number(p.total || 0) !== esperado) {
+        p.total = esperado;
+        changed = true;
+      }
+    });
+  });
+  if (changed) saveDB(data);
+  return data;
+}
+
 function loadDB() {
   const raw = localStorage.getItem(DB_KEY);
-  if (raw) return JSON.parse(raw);
+  if (raw) {
+    try {
+      return normalizeInventoryData(JSON.parse(raw));
+    } catch (err) {
+      console.warn('DB corrupto, regenerando inventario:', err);
+      localStorage.removeItem(DB_KEY);
+    }
+  }
   const initial = { sections: [
     { id:'herbicidas', name:'HERBICIDAS', products:[
       {producto:'RAPIBROT 50SL',          cantidad:5,   precio:26,  total:130,  presentacion:'Frasco',vencimiento:'09/2026',    estado:'BUEN ESTADO',             observacion:'',activo:true},
@@ -100,7 +129,7 @@ function loadDB() {
       {producto:'RAPIBROT X 4LT',         cantidad:20,  precio:86,  total:1720, presentacion:'Vidón', vencimiento:'04/2026',    estado:'BUEN ESTADO',             observacion:'',activo:true},
       {producto:'DUPLEX X 250ML',         cantidad:1,   precio:1,   total:1,    presentacion:'Frasco',vencimiento:'08/2019',    estado:'UN POCO DAÑADO ETIQUETA', observacion:'Etiqueta despegada',activo:true},
       {producto:'AFALON 500SC X 250CC',   cantidad:140, precio:20,  total:2800, presentacion:'Frasco',vencimiento:'09/2025',    estado:'BUEN ESTADO',             observacion:'',activo:true},
-      {producto:'TRUENO GALONERA X 4 LT', cantidad:1,   precio:80,  total:100,  presentacion:'Frasco',vencimiento:'2025',       estado:'BUEN ESTADO',             observacion:'',activo:true},
+      {producto:'TRUENO GALONERA X 4 LT', cantidad:1,   precio:80,  total:80,   presentacion:'Frasco',vencimiento:'2025',       estado:'BUEN ESTADO',             observacion:'',activo:true},
     ]},
     { id:'insecticidas', name:'INSECTICIDAS', products:[
       {producto:'INDOXACROP 150SC X 250ML',       cantidad:4,  precio:54,  total:216, presentacion:'Frasco',vencimiento:'03/2026',      estado:'BUEN ESTADO',                observacion:'',activo:true},
@@ -242,6 +271,38 @@ function loadDB() {
       {producto:'TRUENO x 4LT',    cantidad:1, stock:0,  receptor:'ENRIQUE INGA', codigo:'1139',  precio:72,  total:72,  observacion:'',          fecha:'13/05/2026'},
       {producto:'GUSADRIN X1KG',   cantidad:2, stock:15, receptor:'COMPRADOR',    codigo:'14474', precio:10,  total:20,  observacion:'SE HIZO EL PAGO A OLENKA', fecha:'13/05/2026'},
     ]},
+    { id:'reetiquetados', name:'REETIQUETADOS', products:[
+      {producto:'SUPRAZIME X 1LT',        cantidad:114, reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'ARMADOR X 200ML',        cantidad:9,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'LAMBFAST X 250ML',       cantidad:6,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'VIBREL X 1LT',           cantidad:8,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'CLOFEDYN X 1LT',         cantidad:30,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'LUNA TRANQUILITY',       cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'LUNA TRANQUILITY X 250ML',cantidad:1,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'OPERA 250ML',            cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'INVENTO X 250ML',        cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'AFALON 500SC X 250CC',   cantidad:140, reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'ROMERIA X LT',           cantidad:10,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'DARESYS 250EC X 250ML',  cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'URKAN',                  cantidad:65,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'NOSTOC 40 OD X 1 LT',   cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'ARAGON X LT',            cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'KOYLLOR X 1LT',          cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'PERDIGON X LT',          cantidad:5,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'CODIGO GOLD X LT',       cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'INCENTIVE X 1LT',        cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'CAYON X 1LT',            cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'HACHE UNO SUPER X 1LT',  cantidad:4,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'BENPROX 250SC X 1LT',    cantidad:5,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'AMISTAR TOP X 1LT',      cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'IRONMAN X LT',           cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'PACZOL X LT',            cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'TOPAS X LT',             cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'ENDURA FRASCO X 1LT',    cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'SOLVIGO X LT',           cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'CITOGIB X 1LT',          cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      {producto:'PREZA X LT',             cantidad:12,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+    ]},
   ]};
   saveDB(initial);
   return initial;
@@ -284,6 +345,9 @@ function renderView() {
   } else if (currentView === 'salidas') {
     updateTopbar('fa-solid fa-arrow-right-from-bracket', 'Salidas', 'Registro de movimientos');
     main.appendChild(buildSalidasCard());
+  } else if (currentView === 'reetiquetados') {
+    updateTopbar('fa-solid fa-tag', 'Reetiquetados', 'Registro de reetiquetado');
+    main.appendChild(buildReetiquetadosCard());
   } else if (currentView.startsWith('inactivos:')) {
     const secId = currentView.replace('inactivos:', '');
     const sec = db.sections.find(s => s.id === secId);
@@ -312,7 +376,7 @@ function renderSidebarNav() {
   container.innerHTML = '';
 
   // Secciones normales (excluye salidas y desechos que van aparte)
-  const normalSecs = db.sections.filter(s => s.id !== 'salidas' && s.id !== 'desechos');
+  const normalSecs = db.sections.filter(s => s.id !== 'salidas' && s.id !== 'desechos' && s.id !== 'reetiquetados');
   normalSecs.forEach(sec => {
     const cfg = SECTION_CONFIG[sec.id] || { icon:'fa-solid fa-box', color:'bg-gray-500/30', text:'text-gray-200' };
     const activos = sec.products.filter(p => p.activo).length;
@@ -332,7 +396,7 @@ function renderSidebarNav() {
   specialDiv.innerHTML = `<div class="px-4 mt-4 mb-1"><span class="text-green-400/70 text-[10px] font-bold uppercase tracking-widest">Especiales</span></div>`;
   container.appendChild(specialDiv);
 
-  ['desechos','salidas'].forEach(id => {
+  ['desechos','salidas','reetiquetados'].forEach(id => {
     const sec = db.sections.find(s => s.id === id);
     if (!sec) return;
     const cfg = SECTION_CONFIG[id] || { icon:'fa-solid fa-box', color:'bg-gray-500/30', text:'text-gray-200' };
@@ -404,7 +468,7 @@ function buildGeneralCard() {
   const totalAll    = mainSections.reduce((s, sec) => s + sec.products.length, 0);
   const totalActivo = allActive.length;
   const totalInact  = mainSections.reduce((s, sec) => s + sec.products.filter(p => !p.activo).length, 0);
-  const monto       = mainSections.reduce((s, sec) => s + sec.products.reduce((ss, p) => ss + Number(p.total), 0), 0);
+  const monto       = mainSections.reduce((s, sec) => s + sec.products.filter(p => p.activo).reduce((ss, p) => ss + getProductTotal(p), 0), 0);
 
   // Total de salidas
   const salidaSec   = db.sections.find(s => s.id === 'salidas');
@@ -444,7 +508,7 @@ function buildGeneralCard() {
       <td class="px-3 py-2 font-medium text-gray-800">${p.producto}</td>
       <td class="px-3 py-2 text-center">${p.cantidad}</td>
       <td class="px-3 py-2 text-right">S/ ${Number(p.precio).toFixed(2)}</td>
-      <td class="px-3 py-2 text-right font-semibold">S/ ${Number(p.total).toFixed(2)}</td>
+      <td class="px-3 py-2 text-right font-semibold">S/ ${getProductTotal(p).toFixed(2)}</td>
       <td class="px-3 py-2">${presentacionBadge(p.presentacion)}</td>
       <td class="px-3 py-2 text-gray-600">${p.vencimiento}</td>
       <td class="px-3 py-2">${condicionBadge(p.estado)}</td>
@@ -949,6 +1013,17 @@ function closeDeleteModal() {
   document.getElementById('deleteOverlay').classList.remove('open');
 }
 document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+  if (_pendingReetDelete !== null) {
+    const sec = getReetSec();
+    sec.products[_pendingReetDelete].activo = false;
+    saveDB(db);
+    const idx = _pendingReetDelete;
+    _pendingReetDelete = null;
+    closeDeleteModal();
+    showToast('Registro eliminado', 'error');
+    navigateTo('reetiquetados');
+    return;
+  }
   if (!pendingDelete) return;
   const { secId, idx } = pendingDelete;
   db.sections.find(s => s.id === secId).products[idx].activo = false;
@@ -1060,15 +1135,15 @@ function recalcularTotales() {
 }
 
 function mostrarDiagnostico() {
-  const excluir = ['desechos','salidas'];
+  const excluir = ['desechos','salidas','reetiquetados'];
   let html = '<div style="font-family:monospace;font-size:12px;line-height:1.7">';
   let grand = 0;
   db.sections.forEach(sec => {
     if (excluir.includes(sec.id)) return;
-    const t = (sec.products||[]).reduce((a,p)=>a+Number(p.total),0);
+    const t = (sec.products||[]).filter(p => p.activo).reduce((a,p)=>a+Number(p.total || 0),0);
     grand += t;
     html += `<div style="margin-top:8px;font-size:13px"><b>${sec.name}: S/ ${t}</b></div>`;
-    (sec.products||[]).forEach((p,i) => {
+    (sec.products||[]).filter(p => p.activo).forEach((p,i) => {
       html += `<div style="padding-left:12px;color:#555">[${i}] ${p.producto} — cant:${p.cantidad} × precio:${p.precio} = <b>${p.total}</b></div>`;
     });
   });
@@ -1447,6 +1522,294 @@ document.getElementById('confirmPermDeleteSalidaBtn').addEventListener('click', 
 });
 
 // ============================================================
+// REETIQUETADOS
+// ============================================================
+function getReetSec() {
+  return db.sections.find(s => s.id === 'reetiquetados');
+}
+
+function reetEstadoBadge(estado) {
+  if (estado === 'PENDIENTE')
+    return `<span class="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5 rounded-full border border-yellow-300"><i class="fa-solid fa-clock text-[10px]"></i> PENDIENTE</span>`;
+  if (estado === 'ENTREGADO')
+    return `<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full border border-green-300"><i class="fa-solid fa-circle-check text-[10px]"></i> ENTREGADO</span>`;
+  if (estado === 'EN PROCESO')
+    return `<span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full border border-blue-300"><i class="fa-solid fa-spinner text-[10px]"></i> EN PROCESO</span>`;
+  return `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-600 text-xs font-bold px-2 py-0.5 rounded-full border border-gray-300">${estado}</span>`;
+}
+
+function buildReetiquetadosCard() {
+  const sec = getReetSec();
+  const products = sec ? (sec.products || []) : [];
+  const activos   = products.filter(p => p.activo);
+  const inactivos = products.filter(p => !p.activo);
+  const totalReet = activos.filter(p => p.reetiquetado).length;
+  const pendientes = activos.filter(p => p.estado === 'PENDIENTE').length;
+
+  const buildReetRow = (p, idx, isActive) => {
+    const activoBadge = p.activo
+      ? `<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full border border-green-300"><i class="fa-solid fa-circle text-green-500 text-[8px]"></i> Activo</span>`
+      : `<span class="inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full border border-red-300"><i class="fa-solid fa-circle text-red-400 text-[8px]"></i> Inactivo</span>`;
+    const reetBadge = p.reetiquetado
+      ? `<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full border border-green-300"><i class="fa-solid fa-check text-[10px]"></i> Sí</span>`
+      : `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full border border-gray-300"><i class="fa-solid fa-xmark text-[10px]"></i> No</span>`;
+    const rowClass = isActive ? 'border-b border-gray-100 hover:bg-teal-50/30 transition' : 'border-b border-gray-100 hover:bg-red-50/30 transition';
+    const actions = isActive
+      ? `<div class="flex items-center justify-center gap-1">
+          <button onclick="openReetiquetadoDetailModal(${idx})" title="Ver detalles"
+            class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+            <i class="fa-solid fa-eye text-xs"></i>
+          </button>
+          <button onclick="openReetiquetadoModal(${idx})" title="Editar"
+            class="p-1.5 rounded-lg bg-yellow-100 hover:bg-yellow-200 text-yellow-600 transition">
+            <i class="fa-solid fa-pen text-xs"></i>
+          </button>
+          <button onclick="askDeleteReet(${idx})" title="Eliminar"
+            class="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-500 transition">
+            <i class="fa-solid fa-trash text-xs"></i>
+          </button>
+        </div>`
+      : `<div class="flex items-center justify-center gap-1">
+          <button onclick="openReetiquetadoDetailModal(${idx})" title="Ver detalles"
+            class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+            <i class="fa-solid fa-eye text-xs"></i>
+          </button>
+          <button onclick="restoreReet(${idx})" title="Restaurar"
+            class="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold text-xs transition">
+            <i class="fa-solid fa-rotate-left"></i> Restaurar
+          </button>
+          <button onclick="askPermDeleteReet(${idx})" title="Eliminar permanentemente"
+            class="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 font-bold text-xs transition">
+            <i class="fa-solid fa-trash-can"></i> Borrar
+          </button>
+        </div>`;
+    return `<tr class="${rowClass}">
+      <td class="px-3 py-2 font-medium ${isActive ? 'text-gray-800' : 'text-gray-400'}">${p.producto}</td>
+      <td class="px-3 py-2 text-center ${isActive ? 'text-gray-700' : 'text-gray-400'}">${p.cantidad}</td>
+      <td class="px-3 py-2">${reetBadge}</td>
+      <td class="px-3 py-2 text-gray-600 text-sm">${p.entregadoA || '—'}</td>
+      <td class="px-3 py-2 text-gray-500 text-sm">${p.fecha || '—'}</td>
+      <td class="px-3 py-2">${reetEstadoBadge(p.estado)}</td>
+      <td class="px-3 py-2">${activoBadge}</td>
+      <td class="px-3 py-2">${actions}</td>
+    </tr>`;
+  };
+
+  const activeRows  = activos.map(p  => buildReetRow(p, products.indexOf(p), true)).join('');
+  const inactiveRows = inactivos.map(p => buildReetRow(p, products.indexOf(p), false)).join('');
+  const allRows = (activeRows || '') + (inactiveRows || '');
+  const rows = allRows || `<tr><td colspan="8" class="text-center py-14 text-gray-400 text-sm">
+    <i class="fa-solid fa-tag text-4xl mb-3 block text-gray-300"></i>Sin registros de reetiquetado.
+  </td></tr>`;
+
+  const card = document.createElement('div');
+  card.className = 'section-card bg-white rounded-2xl shadow-md overflow-hidden';
+  card.innerHTML = `
+    <div class="bg-gradient-to-r from-teal-700 to-teal-600 px-6 py-5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+          <i class="fa-solid fa-tag text-white text-lg"></i>
+        </div>
+        <div>
+          <h2 class="text-white font-bold text-xl tracking-wide">REETIQUETADOS</h2>
+          <p class="text-white/70 text-xs">${activos.length} activo${activos.length!==1?'s':''}</p>
+        </div>
+      </div>
+      <button onclick="openReetiquetadoModal()"
+        class="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2 rounded-xl text-sm transition border border-white/30">
+        <i class="fa-solid fa-plus"></i> Agregar
+      </button>
+    </div>
+    <div class="px-6 py-4 flex flex-wrap gap-3 border-b border-gray-100">
+      <div class="flex flex-col items-center bg-blue-50 border border-blue-200 rounded-xl px-4 py-2 min-w-[80px]">
+        <span class="text-xs text-blue-500 font-semibold uppercase">Total</span>
+        <span class="text-2xl font-bold text-blue-700">${products.length}</span>
+      </div>
+      <div class="flex flex-col items-center bg-green-50 border border-green-200 rounded-xl px-4 py-2 min-w-[100px]">
+        <span class="text-xs text-green-600 font-semibold uppercase">Reetiquetados</span>
+        <span class="text-2xl font-bold text-green-700">${totalReet}</span>
+      </div>
+      <div class="flex flex-col items-center bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2 min-w-[100px]">
+        <span class="text-xs text-yellow-600 font-semibold uppercase">Pendientes</span>
+        <span class="text-2xl font-bold text-yellow-700">${pendientes}</span>
+      </div>
+      <div class="flex flex-col items-center bg-red-50 border border-red-200 rounded-xl px-4 py-2 min-w-[80px]">
+        <span class="text-xs text-red-500 font-semibold uppercase">Inactivos</span>
+        <span class="text-2xl font-bold text-red-600">${inactivos.length}</span>
+      </div>
+    </div>
+    <div class="table-wrap px-2 py-2">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-teal-50 text-teal-800 text-xs uppercase">
+            <th class="px-3 py-2 text-left font-semibold">Producto</th>
+            <th class="px-3 py-2 text-center font-semibold">Cant.</th>
+            <th class="px-3 py-2 text-left font-semibold">Reetiquetado</th>
+            <th class="px-3 py-2 text-left font-semibold">Entregado a</th>
+            <th class="px-3 py-2 text-left font-semibold">Fecha</th>
+            <th class="px-3 py-2 text-left font-semibold">Estado</th>
+            <th class="px-3 py-2 text-left font-semibold">Activo</th>
+            <th class="px-3 py-2 text-center font-semibold">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  return card;
+}
+
+// ---- Modal Agregar/Editar Reetiquetado ----
+function openReetiquetadoModal(idx = null) {
+  const overlay = document.getElementById('reetiquetadoOverlay');
+  const form    = document.getElementById('reetiquetadoForm');
+  document.getElementById('reetModalTitle').textContent = idx === null ? 'Agregar Reetiquetado' : 'Editar Reetiquetado';
+  document.getElementById('reetEditIndex').value = idx !== null ? idx : '';
+
+  if (idx !== null) {
+    const sec = getReetSec();
+    const p   = sec.products[idx];
+    document.getElementById('reetProducto').value    = p.producto;
+    document.getElementById('reetCantidad').value    = p.cantidad;
+    document.getElementById('reetReetiquetado').checked = p.reetiquetado;
+    document.getElementById('reetEntregadoA').value  = p.entregadoA || '';
+    document.getElementById('reetFecha').value       = p.fecha || '';
+    document.getElementById('reetEstado').value      = p.estado || 'PENDIENTE';
+    document.getElementById('reetActivo').checked    = p.activo;
+  } else {
+    form.reset();
+    document.getElementById('reetActivo').checked = true;
+    document.getElementById('reetEstado').value   = 'PENDIENTE';
+  }
+  overlay.classList.add('open');
+}
+function closeReetiquetadoModal() {
+  document.getElementById('reetiquetadoOverlay').classList.remove('open');
+}
+
+document.getElementById('reetiquetadoForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const sec = getReetSec();
+  const idx = document.getElementById('reetEditIndex').value;
+  const prod = {
+    producto:     document.getElementById('reetProducto').value.trim(),
+    cantidad:     Number(document.getElementById('reetCantidad').value),
+    reetiquetado: document.getElementById('reetReetiquetado').checked,
+    entregadoA:   document.getElementById('reetEntregadoA').value.trim(),
+    fecha:        document.getElementById('reetFecha').value.trim(),
+    estado:       document.getElementById('reetEstado').value,
+    activo:       document.getElementById('reetActivo').checked,
+  };
+  if (idx === '') { sec.products.push(prod); showToast('Reetiquetado agregado', 'success'); }
+  else            { sec.products[Number(idx)] = prod; showToast('Reetiquetado actualizado', 'info'); }
+  saveDB(db);
+  closeReetiquetadoModal();
+  navigateTo('reetiquetados');
+});
+
+// ---- Modal Detalle Reetiquetado ----
+function openReetiquetadoDetailModal(idx) {
+  const sec = getReetSec();
+  const p   = sec.products[idx];
+  const activoBadge = p.activo
+    ? `<span class="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full border border-green-300"><i class="fa-solid fa-circle text-green-500 text-[8px]"></i> Activo</span>`
+    : `<span class="inline-flex items-center gap-1.5 bg-red-100 text-red-600 text-xs font-bold px-3 py-1 rounded-full border border-red-300"><i class="fa-solid fa-circle text-red-400 text-[8px]"></i> Inactivo</span>`;
+  const reetBadge = p.reetiquetado
+    ? `<span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full border border-green-300"><i class="fa-solid fa-check text-[10px]"></i> Sí</span>`
+    : `<span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs font-bold px-2 py-0.5 rounded-full border border-gray-300"><i class="fa-solid fa-xmark text-[10px]"></i> No</span>`;
+
+  document.getElementById('reetDetailContent').innerHTML = `
+    <div class="bg-gradient-to-r from-teal-700 to-teal-600 -mx-6 -mt-6 px-6 py-5 mb-5 rounded-t-2xl">
+      <div class="flex items-start gap-3">
+        <div class="w-11 h-11 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i class="fa-solid fa-tag text-white text-xl"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-white font-bold text-lg leading-tight">${p.producto}</h3>
+          <p class="text-white/60 text-xs mt-0.5">REETIQUETADOS</p>
+        </div>
+        <div class="flex-shrink-0">${activoBadge}</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <div class="flex flex-col items-center bg-blue-50 border border-blue-100 rounded-xl py-3 px-2">
+        <i class="fa-solid fa-cubes text-blue-400 text-base mb-1"></i>
+        <span class="text-[10px] text-blue-500 font-semibold uppercase tracking-wide">Cantidad</span>
+        <span class="text-xl font-black text-blue-700 mt-0.5">${p.cantidad}</span>
+      </div>
+      <div class="flex flex-col items-center bg-teal-50 border border-teal-100 rounded-xl py-3 px-2">
+        <i class="fa-solid fa-tag text-teal-400 text-base mb-1"></i>
+        <span class="text-[10px] text-teal-600 font-semibold uppercase tracking-wide">Reetiquetado</span>
+        <div class="mt-1">${reetBadge}</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mb-2">
+      <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+        <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-1 mb-1.5">
+          <i class="fa-solid fa-user text-teal-400"></i> Entregado a
+        </p>
+        <span class="text-sm font-semibold text-gray-700">${p.entregadoA || '<span class="text-gray-400 italic">—</span>'}</span>
+      </div>
+      <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+        <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-1 mb-1.5">
+          <i class="fa-solid fa-calendar text-teal-400"></i> Fecha
+        </p>
+        <span class="text-sm font-semibold text-gray-700">${p.fecha || '<span class="text-gray-400 italic">—</span>'}</span>
+      </div>
+    </div>
+    <div class="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-4">
+      <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide flex items-center gap-1 mb-1.5">
+        <i class="fa-solid fa-circle-info text-teal-400"></i> Estado
+      </p>
+      ${reetEstadoBadge(p.estado)}
+    </div>
+    <button onclick="closeReetiquetadoDetailModal()"
+      class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+      <i class="fa-solid fa-xmark"></i> Cerrar
+    </button>`;
+  document.getElementById('reetiquetadoDetailOverlay').classList.add('open');
+}
+function closeReetiquetadoDetailModal() {
+  document.getElementById('reetiquetadoDetailOverlay').classList.remove('open');
+}
+
+// ---- Eliminar (soft) Reetiquetado ----
+let _pendingReetDelete = null;
+function askDeleteReet(idx) {
+  _pendingReetDelete = idx;
+  pendingDelete = null; // clear normal pending so existing handler skips
+  document.getElementById('deleteOverlay').classList.add('open');
+}
+
+// ---- Restaurar Reetiquetado ----
+function restoreReet(idx) {
+  const sec = getReetSec();
+  sec.products[idx].activo = true;
+  saveDB(db);
+  showToast('Registro restaurado', 'success');
+  navigateTo('reetiquetados');
+}
+
+// ---- Eliminar permanentemente Reetiquetado ----
+let _pendingPermReetDelete = null;
+function askPermDeleteReet(idx) {
+  _pendingPermReetDelete = idx;
+  document.getElementById('permDeleteReetOverlay').classList.add('open');
+}
+function closePermDeleteReetModal() {
+  _pendingPermReetDelete = null;
+  document.getElementById('permDeleteReetOverlay').classList.remove('open');
+}
+document.getElementById('confirmPermDeleteReetBtn').addEventListener('click', function() {
+  if (_pendingPermReetDelete === null) return;
+  const sec = getReetSec();
+  sec.products.splice(_pendingPermReetDelete, 1);
+  saveDB(db);
+  closePermDeleteReetModal();
+  showToast('Registro eliminado permanentemente', 'error');
+  navigateTo('reetiquetados');
+});
+
+// ============================================================
 // EXPORTAR PDF
 // ============================================================
 function exportarPDF() {
@@ -1569,6 +1932,29 @@ function exportarPDF() {
     y = doc.lastAutoTable.finalY + 8;
   }
 
+  // Sección REETIQUETADOS
+  const reetSec = db.sections.find(s => s.id === 'reetiquetados');
+  if (reetSec && (reetSec.products||[]).length) {
+    if (y > 160) { doc.addPage(); y = 10; }
+    doc.setFillColor(15, 118, 110);
+    doc.roundedRect(10, y, pageW - 20, 8, 2, 2, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text('REETIQUETADOS', 14, y + 5.5);
+    const rt = reetSec.products.filter(p=>p.activo).length;
+    doc.text(`${rt} activos`, pageW - 14, y + 5.5, { align:'right' });
+    y += 10;
+    doc.autoTable({
+      startY: y, margin: { left:10, right:10 },
+      head: [['Producto','Cant.','Reetiquetado','Entregado a','Fecha','Estado']],
+      body: reetSec.products.map(p=>[p.producto,p.cantidad,p.reetiquetado?'Sí':'No',p.entregadoA||'',p.fecha||'',p.estado]),
+      headStyles: { fillColor:[15,118,110], textColor:255, fontStyle:'bold', fontSize:8 },
+      bodyStyles: { fontSize:7.5 },
+      alternateRowStyles: { fillColor:[240,253,250] },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
   // Resumen final
   if (y > 170) { doc.addPage(); y = 10; }
   const bruto   = mainSecs.reduce((a,s)=>a+(s.products||[]).reduce((b,p)=>b+Number(p.total),0),0);
@@ -1643,6 +2029,15 @@ function exportarExcel() {
     csv += `"TOTAL SALIDAS"${SEP}""${SEP}""${SEP}""${SEP}""${SEP}""${SEP}"${totS}"${SEP}""${SEP}""\n`;
   }
 
+  const reetSec = db.sections.find(s => s.id === 'reetiquetados');
+  if (reetSec && (reetSec.products||[]).length) {
+    csv += `\n"=== REETIQUETADOS ==="\n`;
+    csv += `"Producto"${SEP}"Cantidad"${SEP}"Reetiquetado"${SEP}"Entregado a"${SEP}"Fecha"${SEP}"Estado"${SEP}"Activo"\n`;
+    (reetSec.products||[]).forEach(p => {
+      csv += `"${p.producto}"${SEP}"${p.cantidad}"${SEP}"${p.reetiquetado?'Sí':'No'}"${SEP}"${p.entregadoA||''}"${SEP}"${p.fecha||''}"${SEP}"${p.estado}"${SEP}"${p.activo?'Sí':'No'}"\n`;
+    });
+  }
+
   const mainSecs = db.sections.filter(s => !EXCLUDED_FROM_GENERAL.has(s.id));
   const bruto    = mainSecs.reduce((a,s)=>a+(s.products||[]).reduce((b,p)=>b+Number(p.total),0),0);
   const salidas  = salidaSec ? (salidaSec.salidas||[]).reduce((a,r)=>a+Number(r.total),0) : 0;
@@ -1694,9 +2089,11 @@ function doInit() {
   const raw = localStorage.getItem(DB_KEY);
   if (raw) {
     try {
-      const fresh = JSON.parse(raw);
+      const fresh = normalizeInventoryData(JSON.parse(raw));
       db.sections = fresh.sections;
-    } catch(e) {}
+    } catch(e) {
+      console.warn('Error al recargar DB en doInit:', e);
+    }
   }
   initApp();
 }

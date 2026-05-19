@@ -515,6 +515,85 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL AGREGAR/EDITAR REETIQUETADO -->
+<div class="modal-overlay" id="reetiquetadoOverlay">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 overflow-y-auto max-h-[95vh]">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-teal-700 flex items-center gap-2" id="reetModalTitle">
+        <i class="fa-solid fa-tag"></i> Agregar Reetiquetado
+      </h2>
+      <button onclick="closeReetiquetadoModal()" class="text-gray-400 hover:text-red-500 text-xl"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <form id="reetiquetadoForm" class="flex flex-col gap-3">
+      <input type="hidden" id="reetEditIndex"/>
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1"><i class="fa-solid fa-tag text-teal-400"></i> Producto</label>
+        <input id="reetProducto" type="text" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" required/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1"><i class="fa-solid fa-cubes text-blue-400"></i> Cantidad</label>
+        <input id="reetCantidad" type="number" min="0" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" required/>
+      </div>
+      <div class="flex items-center gap-2 bg-teal-50 rounded-lg px-3 py-2">
+        <input id="reetReetiquetado" type="checkbox" class="w-4 h-4 accent-teal-600"/>
+        <label class="text-sm text-gray-600 font-medium flex items-center gap-1"><i class="fa-solid fa-tag text-teal-500"></i> ¿Ya fue reetiquetado?</label>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1"><i class="fa-solid fa-user text-teal-400"></i> Entregado a</label>
+        <input id="reetEntregadoA" type="text" placeholder="Nombre de quien recibe" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1"><i class="fa-solid fa-calendar text-teal-400"></i> Fecha</label>
+        <input id="reetFecha" type="text" placeholder="DD/MM/AAAA" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"/>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1"><i class="fa-solid fa-circle-info text-teal-400"></i> Estado</label>
+        <select id="reetEstado" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white">
+          <option value="PENDIENTE">PENDIENTE</option>
+          <option value="EN PROCESO">EN PROCESO</option>
+          <option value="ENTREGADO">ENTREGADO</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+        <input id="reetActivo" type="checkbox" class="w-4 h-4 accent-teal-600" checked/>
+        <label class="text-sm text-gray-600 font-medium flex items-center gap-1"><i class="fa-solid fa-toggle-on text-teal-500"></i> Activo</label>
+      </div>
+      <div class="flex gap-3 mt-1">
+        <button type="submit" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
+        <button type="button" onclick="closeReetiquetadoModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 rounded-lg transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL VER DETALLE REETIQUETADO -->
+<div class="modal-overlay" id="reetiquetadoDetailOverlay">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 overflow-y-auto max-h-[90vh]">
+    <div id="reetDetailContent"></div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR PERMANENTE REETIQUETADO -->
+<div class="modal-overlay" id="permDeleteReetOverlay">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center">
+    <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+      <i class="fa-solid fa-trash-can text-2xl text-red-500"></i>
+    </div>
+    <h2 class="text-lg font-bold text-gray-800 mb-1">¿Eliminar registro?</h2>
+    <p class="text-sm text-gray-500 mb-5">Esta acción <strong class="text-red-600">no se puede deshacer</strong>.</p>
+    <div class="flex gap-3 justify-center">
+      <button id="confirmPermDeleteReetBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2 rounded-lg transition flex items-center gap-2">
+        <i class="fa-solid fa-trash-can"></i> Sí, borrar
+      </button>
+      <button onclick="closePermDeleteReetModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-6 py-2 rounded-lg transition">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   ['agroInventarioDB','agroInventarioDB_v2','agroInventarioDB_v3','agroInventarioDB_v4'].forEach(k => localStorage.removeItem(k));
 
@@ -794,6 +873,44 @@
       if (rapibrot && rapibrot.cantidad === 320) {
         rapibrot.cantidad = 20; rapibrot.total = 1720; changed = true;
       }
+    }
+
+    // Reetiquetados: inyectar si la sección no existe
+    const reetSec = data.sections.find(s => s.id === 'reetiquetados');
+    if (!reetSec) {
+      data.sections.push({ id:'reetiquetados', name:'REETIQUETADOS', products:[
+        {producto:'SUPRAZIME X 1LT',        cantidad:114, reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'ARMADOR X 200ML',        cantidad:9,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'LAMBFAST X 250ML',       cantidad:6,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'VIBREL X 1LT',           cantidad:8,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'CLOFEDYN X 1LT',         cantidad:30,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'LUNA TRANQUILITY',       cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'LUNA TRANQUILITY X 250ML',cantidad:1,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'OPERA 250ML',            cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'INVENTO X 250ML',        cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'AFALON 500SC X 250CC',   cantidad:140, reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'ROMERIA X LT',           cantidad:10,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'DARESYS 250EC X 250ML',  cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'URKAN',                  cantidad:65,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'NOSTOC 40 OD X 1 LT',   cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'ARAGON X LT',            cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'KOYLLOR X 1LT',          cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'PERDIGON X LT',          cantidad:5,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'CODIGO GOLD X LT',       cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'INCENTIVE X 1LT',        cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'CAYON X 1LT',            cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'HACHE UNO SUPER X 1LT',  cantidad:4,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'BENPROX 250SC X 1LT',    cantidad:5,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'AMISTAR TOP X 1LT',      cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'IRONMAN X LT',           cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'PACZOL X LT',            cantidad:2,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'TOPAS X LT',             cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'ENDURA FRASCO X 1LT',    cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'SOLVIGO X LT',           cantidad:1,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'CITOGIB X 1LT',          cantidad:3,   reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+        {producto:'PREZA X LT',             cantidad:12,  reetiquetado:false, entregadoA:'', fecha:'', estado:'PENDIENTE', activo:true},
+      ]});
+      changed = true;
     }
 
     // Guardar siempre para asegurar que los cambios queden
