@@ -64,16 +64,7 @@ function goPage(viewKey, page) {
   const vs = getVS(viewKey);
   vs.page = page;
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (viewKey === 'general') {
-    document.getElementById('mainContent').innerHTML = '';
-    document.getElementById('mainContent').appendChild(buildGeneralCard());
-  } else {
-    const sec = db.sections.find(s => s.id === viewKey);
-    if (sec) {
-      document.getElementById('mainContent').innerHTML = '';
-      document.getElementById('mainContent').appendChild(buildSectionCard(sec));
-    }
-  }
+  renderView();
 }
 
 // ============================================================
@@ -715,11 +706,17 @@ function onSecSearch(secId, val) {
 // VISTA INACTIVOS POR SECCIÓN
 // ============================================================
 function buildInactivosCard(sec) {
+  const viewKey = `inactivos:${sec.id}`;
+  const vs = getVS(viewKey);
   const inactivosList = sec.products.filter(p => !p.activo);
   const cfg = SECTION_CONFIG[sec.id] || { icon:'fa-solid fa-box' };
 
-  const rows = inactivosList.length
-    ? inactivosList.map(p => {
+  const totalPages = Math.max(1, Math.ceil(inactivosList.length / ROWS_PER_PAGE));
+  if (vs.page > totalPages) vs.page = totalPages;
+  const pageData = inactivosList.slice((vs.page - 1) * ROWS_PER_PAGE, vs.page * ROWS_PER_PAGE);
+
+  const rows = pageData.length
+    ? pageData.map(p => {
         const ri = sec.products.indexOf(p);
         return `<tr class="border-b border-gray-100 hover:bg-red-50/40 transition">
           <td class="px-3 py-2 font-medium text-gray-500">${p.producto}</td>
@@ -792,7 +789,8 @@ function buildInactivosCard(sec) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${buildPagination(vs.page, totalPages, viewKey)}`;
   return card;
 }
 
@@ -1170,12 +1168,16 @@ function getSalidasSec() {
 }
 
 function buildSalidasCard() {
+  const vs = getVS('salidas');
   const sec = getSalidasSec();
   const salidas = sec ? (sec.salidas || []) : [];
   const totalMonto = salidas.reduce((s, r) => s + Number(r.total), 0);
+  const totalPages = Math.max(1, Math.ceil(salidas.length / ROWS_PER_PAGE));
+  if (vs.page > totalPages) vs.page = totalPages;
+  const pageData = [...salidas].reverse().slice((vs.page - 1) * ROWS_PER_PAGE, vs.page * ROWS_PER_PAGE);
 
-  const rows = salidas.length ? [...salidas].reverse().map((r, ri) => {
-    const realIdx = salidas.length - 1 - ri;
+  const rows = pageData.length ? pageData.map((r, ri) => {
+    const realIdx = salidas.length - 1 - ((vs.page - 1) * ROWS_PER_PAGE + ri);
     return `<tr class="border-b border-gray-100 hover:bg-indigo-50/30 transition">
       <td class="px-3 py-2 font-medium text-gray-800">${r.producto}</td>
       <td class="px-3 py-2 text-center font-bold text-indigo-700">${r.cantidad}</td>
@@ -1253,7 +1255,8 @@ function buildSalidasCard() {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${buildPagination(vs.page, totalPages, 'salidas')}`;
   return card;
 }
 
@@ -1539,6 +1542,8 @@ function reetEstadoBadge(estado) {
 }
 
 function buildReetiquetadosCard() {
+  const viewKey = 'reetiquetados';
+  const vs = getVS(viewKey);
   const sec = getReetSec();
   const products = sec ? (sec.products || []) : [];
   const activos   = products.filter(p => p.activo);
@@ -1595,12 +1600,15 @@ function buildReetiquetadosCard() {
     </tr>`;
   };
 
-  const activeRows  = activos.map(p  => buildReetRow(p, products.indexOf(p), true)).join('');
-  const inactiveRows = inactivos.map(p => buildReetRow(p, products.indexOf(p), false)).join('');
-  const allRows = (activeRows || '') + (inactiveRows || '');
-  const rows = allRows || `<tr><td colspan="8" class="text-center py-14 text-gray-400 text-sm">
-    <i class="fa-solid fa-tag text-4xl mb-3 block text-gray-300"></i>Sin registros de reetiquetado.
-  </td></tr>`;
+  const totalPages = Math.max(1, Math.ceil(products.length / ROWS_PER_PAGE));
+  if (vs.page > totalPages) vs.page = totalPages;
+  const items = products.map((p, idx) => ({ p, idx }));
+  const pageItems = items.slice((vs.page - 1) * ROWS_PER_PAGE, vs.page * ROWS_PER_PAGE);
+  const rows = pageItems.length
+    ? pageItems.map(item => buildReetRow(item.p, item.idx, item.p.activo)).join('')
+    : `<tr><td colspan="8" class="text-center py-14 text-gray-400 text-sm">
+        <i class="fa-solid fa-tag text-4xl mb-3 block text-gray-300"></i>Sin registros de reetiquetado.
+       </td></tr>`;
 
   const card = document.createElement('div');
   card.className = 'section-card bg-white rounded-2xl shadow-md overflow-hidden';
@@ -1654,7 +1662,8 @@ function buildReetiquetadosCard() {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${buildPagination(vs.page, totalPages, viewKey)}`;
   return card;
 }
 
