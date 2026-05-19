@@ -978,9 +978,9 @@
   const docRef  = doc(fsdb, 'inventario', 'main');
 
   // Guardar en Firestore
-  window._firestoreSave = async (data) => {
+  window._firestoreSave = async (data, localSaveTime = Date.now()) => {
     try {
-      await setDoc(docRef, { data: JSON.stringify(data) });
+      await setDoc(docRef, { data: JSON.stringify(data), updatedAt: localSaveTime });
       const el = document.getElementById('syncIndicator');
       if (el) { el.textContent = '✓ Sincronizado'; el.style.opacity='1'; setTimeout(()=>el.style.opacity='0',2500); }
     } catch(e) { console.error('Firestore save error:', e); }
@@ -990,8 +990,13 @@
   onSnapshot(docRef, (snap) => {
     if (!snap.exists()) return;
     try {
-      const remote = JSON.parse(snap.data().data);
+      const remoteData = snap.data();
+      const remote = JSON.parse(remoteData.data);
       const local  = localStorage.getItem('agroInventarioDB_v5');
+      const remoteTime = remoteData.updatedAt || 0;
+      if (window._lastLocalSave && remoteTime <= window._lastLocalSave) {
+        return; // Ignorar cambios remotos más viejos o iguales al último guardado local
+      }
       if (JSON.stringify(remote) !== local) {
         localStorage.setItem('agroInventarioDB_v5', JSON.stringify(remote));
         // Si la app ya cargó, actualizar en vivo

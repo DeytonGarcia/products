@@ -300,9 +300,10 @@ function loadDB() {
 }
 function saveDB(db) {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
+  window._lastLocalSave = Date.now();
   // Guardar en Firestore si está disponible
   if (window._firestoreSave) {
-    window._firestoreSave(db);
+    window._firestoreSave(db, window._lastLocalSave);
     if (window._showSyncIndicator) window._showSyncIndicator('↑ Guardando...');
   }
 }
@@ -313,6 +314,7 @@ function saveDB(db) {
 let db = loadDB();
 let pendingDelete = null;
 let currentView = 'general';
+window._lastLocalSave = 0;
 
 // ============================================================
 // NAVEGACIÓN
