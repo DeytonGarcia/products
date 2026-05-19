@@ -1506,7 +1506,7 @@ document.getElementById('editSalidaForm').addEventListener('submit', function(e)
   saveDB(db);
   closeEditSalidaModal();
   showToast('Salida actualizada', 'info');
-  navigateTo('salidas');
+  renderAll();
 });
 
 // Eliminar salida permanentemente
@@ -1541,7 +1541,7 @@ document.getElementById('confirmPermDeleteSalidaBtn').addEventListener('click', 
   saveDB(db);
   closePermDeleteSalidaModal();
   showToast('Registro eliminado — stock restaurado', 'info');
-  navigateTo('salidas');
+  renderAll();
 });
 
 // ============================================================
