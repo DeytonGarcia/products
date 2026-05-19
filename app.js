@@ -395,7 +395,7 @@ function saveDB(db) {
   window._lastLocalSave = Date.now();
   // Guardar en Firestore si está disponible
   if (window._firestoreSave) {
-    window._firestoreSave(db, window._lastLocalSave);
+    window._firestoreSave(db);
     if (window._showSyncIndicator) window._showSyncIndicator('↑ Guardando...');
   }
 }
