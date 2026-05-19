@@ -317,14 +317,32 @@ let currentView = 'general';
 // ============================================================
 // NAVEGACIÓN
 // ============================================================
+function showPageLoader(message = 'Cargando sección...') {
+  const loader = document.getElementById('pageLoader');
+  if (!loader) return;
+  loader.querySelector('.loader-text').textContent = message;
+  loader.classList.remove('hidden');
+}
+
+function hidePageLoader(delay = 1000) {
+  const loader = document.getElementById('pageLoader');
+  if (!loader) return;
+  setTimeout(() => loader.classList.add('hidden'), delay);
+}
+
 function navigateTo(viewId) {
+  if (currentView === viewId) return;
   currentView = viewId;
   document.querySelectorAll('.sidebar-link').forEach(el =>
     el.classList.toggle('active', el.dataset.view === viewId)
   );
-  renderView();
   closeMobileSidebar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  showPageLoader('Cargando tabla...');
+  setTimeout(() => {
+    renderView();
+    hidePageLoader(1000);
+  }, 220);
 }
 
 function renderView() {
@@ -2086,7 +2104,9 @@ function ejecutarReinicio() {
 // ============================================================
 function initApp() {
   window.db = db;
+  showPageLoader('Cargando inventario...');
   renderAll();
+  hidePageLoader(1000);
 }
 
 // Esperar a Firebase (máx 4 segundos de fallback)

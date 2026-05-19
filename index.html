@@ -93,11 +93,47 @@
     .page-btn:hover { background:#f1f5f9; }
     .page-btn.active { background:#16a34a; color:#fff; border-color:#16a34a; }
     .page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    #pageLoader {
+      position:fixed; inset:0; z-index:2000;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(249,250,251,0.95); backdrop-filter:blur(10px);
+      transition:opacity .28s ease, visibility .28s ease;
+      opacity:1; visibility:visible;
+    }
+    #pageLoader.hidden {
+      opacity:0; visibility:hidden;
+      pointer-events:none;
+    }
+    #pageLoader .loader-panel {
+      display:flex; flex-direction:column; align-items:center; gap:18px;
+      padding:26px 30px; border-radius:24px;
+      background:rgba(255,255,255,0.88); border:1px solid rgba(15,23,42,0.08);
+      box-shadow:0 22px 50px rgba(15,23,42,0.12);
+      min-width:260px; max-width:88%;
+    }
+    #pageLoader .loader-ring {
+      width:72px; height:72px; border:8px solid rgba(22,163,74,0.18);
+      border-top-color:#16a34a; border-radius:50%; animation:spin 1s linear infinite;
+    }
+    #pageLoader .loader-text {
+      color:#0f172a; font-size:0.95rem; font-weight:700; text-align:center;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
+
+<div id="pageLoader">
+  <div class="loader-panel">
+    <div class="text-green-700 text-4xl">
+      <i class="fa-solid fa-seedling"></i>
+    </div>
+    <div class="loader-ring"></div>
+    <div class="loader-text">Preparando el inventario...</div>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <aside id="sidebar">
