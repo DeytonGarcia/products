@@ -1036,6 +1036,32 @@
   const fbApp   = initializeApp(firebaseConfig);
   const fsdb    = getFirestore(fbApp);
   const docRef  = doc(fsdb, 'inventario', 'main');
+  const FB_LOCAL_META_KEY = 'agroInventarioDB_v5_meta';
+
+  function normalizeFirestoreTimestamp(value) {
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    if (value && typeof value.toMillis === 'function') return value.toMillis();
+    return 0;
+  }
+
+  function getLocalMetaUpdatedAt() {
+    const raw = localStorage.getItem(FB_LOCAL_META_KEY);
+    if (!raw) return 0;
+    try {
+      const meta = JSON.parse(raw);
+      return typeof meta.updatedAt === 'number' ? meta.updatedAt : 0;
+    } catch {
+      localStorage.removeItem(FB_LOCAL_META_KEY);
+      return 0;
+    }
+  }
+
+  function saveLocalMetaUpdatedAt(updatedAt) {
+    localStorage.setItem(FB_LOCAL_META_KEY, JSON.stringify({ updatedAt }));
+  }
+
+  window._firestoreNeedsSync = false;
 
   // Guardar en Firestore
   window._firestoreSave = async (data) => {
@@ -1052,9 +1078,11 @@
     try {
       const remoteData = snap.data();
       const remote = JSON.parse(remoteData.data);
-      const local  = localStorage.getItem('agroInventarioDB_v5');
-      if (JSON.stringify(remote) !== local) {
+      const remoteTime = normalizeFirestoreTimestamp(remoteData.updatedAt);
+      const localTime = getLocalMetaUpdatedAt();
+      if (remoteTime > localTime) {
         localStorage.setItem('agroInventarioDB_v5', JSON.stringify(remote));
+        saveLocalMetaUpdatedAt(remoteTime);
         // Si la app ya cargó, actualizar en vivo
         if (window.db && typeof renderAll === 'function') {
           window.db.sections = remote.sections;
@@ -1068,11 +1096,24 @@
 
   // Cargar datos remotos ANTES de iniciar app.js
   getDoc(docRef).then(snap => {
+    const localTime = getLocalMetaUpdatedAt();
+    const localRaw = localStorage.getItem('agroInventarioDB_v5');
     if (snap.exists()) {
       try {
-        const remote = JSON.parse(snap.data().data);
-        localStorage.setItem('agroInventarioDB_v5', JSON.stringify(remote));
-      } catch(e) {}
+        const remoteData = snap.data();
+        const remote = JSON.parse(remoteData.data);
+        const remoteTime = normalizeFirestoreTimestamp(remoteData.updatedAt);
+        if (remoteTime > localTime || !localTime) {
+          localStorage.setItem('agroInventarioDB_v5', JSON.stringify(remote));
+          saveLocalMetaUpdatedAt(remoteTime);
+        } else if (localRaw) {
+          window._firestoreNeedsSync = true;
+        }
+      } catch(e) {
+        if (localRaw) window._firestoreNeedsSync = true;
+      }
+    } else if (localRaw) {
+      window._firestoreNeedsSync = true;
     }
     // Señal: Firebase listo, cargar app
     window._firebaseReady = true;

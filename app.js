@@ -172,6 +172,22 @@ function getVS(key) {
 // BASE DE DATOS
 // ============================================================
 const DB_KEY = 'agroInventarioDB_v5';
+const DB_META_KEY = 'agroInventarioDB_v5_meta';
+
+function getLocalDBMeta() {
+  const raw = localStorage.getItem(DB_META_KEY);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { localStorage.removeItem(DB_META_KEY); return null; }
+}
+
+function getLocalDBUpdatedAt() {
+  const meta = getLocalDBMeta();
+  return meta && typeof meta.updatedAt === 'number' ? meta.updatedAt : 0;
+}
+
+function saveLocalDBMeta(updatedAt) {
+  localStorage.setItem(DB_META_KEY, JSON.stringify({ updatedAt }));
+}
 
 function getProductTotal(p) {
   return Number(p.cantidad || 0) * Number(p.precio || 0);
@@ -392,7 +408,9 @@ function loadDB() {
 }
 function saveDB(db) {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
-  window._lastLocalSave = Date.now();
+  const now = Date.now();
+  saveLocalDBMeta(now);
+  window._lastLocalSave = now;
   // Guardar en Firestore si está disponible
   if (window._firestoreSave) {
     window._firestoreSave(db);
@@ -404,9 +422,9 @@ function saveDB(db) {
 // ESTADO GLOBAL
 // ============================================================
 let db = loadDB();
+window._lastLocalSave = getLocalDBUpdatedAt();
 let pendingDelete = null;
 let currentView = 'general';
-window._lastLocalSave = 0;
 
 // ============================================================
 // NAVEGACIÓN
@@ -2217,7 +2235,13 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 // Esperar a Firebase (máx 4 segundos de fallback)
 let _initDone = false;
 function doInit() {
-  if (_initDone) return;
+  if (_initDone) {
+    if (window._firestoreNeedsSync && window._firestoreSave && window.db) {
+      window._firestoreSave(db);
+      window._firestoreNeedsSync = false;
+    }
+    return;
+  }
   _initDone = true;
   // Recargar db desde localStorage por si Firebase actualizó los datos
   const raw = localStorage.getItem(DB_KEY);
@@ -2225,11 +2249,16 @@ function doInit() {
     try {
       const fresh = normalizeInventoryData(JSON.parse(raw));
       db.sections = fresh.sections;
+      window._lastLocalSave = getLocalDBUpdatedAt();
     } catch(e) {
       console.warn('Error al recargar DB en doInit:', e);
     }
   }
   initApp();
+  if (window._firestoreNeedsSync && window._firestoreSave) {
+    window._firestoreSave(db);
+    window._firestoreNeedsSync = false;
+  }
 }
 
 document.addEventListener('firebaseReady', doInit);
